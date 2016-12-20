@@ -1,0 +1,10 @@
+sudo: required
+language: python
+services:
+- docker
+script: docker build -t halo-scans .
+after_script: docker run -it --rm halo-scans /bin/sh -c "git checkout master; codeclimate-test-reporter
+  --token $CODECLIMATE_REPO_TOKEN --debug"
+env:
+  global:
+    secure: dUAF5kWYjC0HfPFYxWM1OW3By+f8VonJT5N/ZqxjxY0qWiQJT/eD57nFmRECev+Ctx4iTeZR0nmhs/z2Z7NM/xEPbRSTaZMsrnwCVMiQ8P9y3kFXXYwKu+sbJgltlq/2vgHPAHdPXxzDwm04Qn71lgTkl+vJUEao+5uZWlXHAhMJNBnJJvTFf3bbJc2QFxmIMRO4tlP5umGsobMCQJ31NIDpW6FTHU1ZgX+PRVpaFYVH3HWTDlLPi5ia02GM2evecCAneGIujOG0jzQDyHm3zYlA2qfCVzn5whxhPklTAe2aYkHhgx8itlThtxUTUEN7jDra3+J3qz3pBi5Wl1RpeOkc4m+G9IL6wvhB0O2xDBgAeLYv0rNIBcNnrqa8OuIR3dut34l53HAuYHEhiUS5AAfL3ujcaWx7wgPqNQg2zhjEOedeCr0cQkalQM9PcScMJxZ++Fb5BGzcQrM7khbY+yqahXKkilG1RF0FmmcVXiWiEO+nypqA+5qQ+q5rp+4F6UlCQRWHJwL8yAe2cquHSd0lailzvEtL6qwh4ZgXWQtOEbaLMrKzcF4QCX0+hYg8Jat5iBV3EHkxUAHxnzTmDXhxz0uNPt6QzFWhuPAaKJKIlyMttkMl7mlXrIhnKq4S/1aGIWu8NK0SIxq4ZkNy6I2ZfG+ROhyGQ76k743dYec=
