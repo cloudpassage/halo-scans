@@ -1,5 +1,21 @@
-Python module: haloevents
+Python module: haloscans
 =========================
+
+.. image:: https://travis-ci.org/cloudpassage/halo-scans.svg?branch=master
+    :target: https://travis-ci.org/cloudpassage/halo-scans
+
+.. image:: https://codeclimate.com/github/cloudpassage/halo-scans/badges/coverage.svg
+   :target: https://codeclimate.com/github/cloudpassage/halo-scans/coverage
+   :alt: Test Coverage
+
+.. image:: https://codeclimate.com/github/cloudpassage/halo-scans/badges/gpa.svg
+   :target: https://codeclimate.com/github/cloudpassage/halo-scans
+   :alt: Code Climate
+
+.. image:: https://codeclimate.com/github/cloudpassage/halo-scans/badges/issue_count.svg
+   :target: https://codeclimate.com/github/cloudpassage/halo-scans
+   :alt: Issue Count
+
 
 What it is:
 -----------
