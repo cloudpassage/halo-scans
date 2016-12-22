@@ -14,7 +14,6 @@ class HaloScans(object):
     Keyword Args:
         api_host (str): Hostname for Halo API.  Default is api.cloudpassage.com
         api_port (str): Port for API endpoint.  Defaults to 443
-        start_timestamp (str): ISO8601-formatted string.  Defalults to now.
         max_threads (int): Max number of open threads.  Defaults to 10.
         batch_size (int): Limit the depth of the query.  Defaults to 20.
         integration_name (str): Name of the tool using this library.
@@ -27,7 +26,6 @@ class HaloScans(object):
         self.halo_secret = halo_secret
         self.api_host = "api.cloudpassage.com"
         self.api_port = 443
-        self.start_timestamp = Utility.iso8601_now()
         self.max_threads = 10
         self.batch_size = 20
         self.last_scan_timestamp = None
@@ -35,7 +33,8 @@ class HaloScans(object):
         self.scans = []
         self.halo_session = None
         self.ua = Utility.build_ua("")
-        self.search_params = {}
+        self.search_params = {"since": Utility.iso8601_now()
+                              "sort_by": "created_at.asc"}
         self.set_attrs_from_kwargs(kwargs)
 
     def __iter__(self):
@@ -55,16 +54,8 @@ class HaloScans(object):
         return halo_session
 
     def create_url_list(self):
-        """We initially set the 'since' var to the start_timestamp.  The next
-        statement will override that value with the last scan's timestamp, if
-        one is set
-
-        """
-
         base_url = "/v1/scans"
         modifiers = self.search_params
-        if self.start_timestamp is not None:
-            modifiers["since"] = self.start_timestamp
         if self.last_scan_timestamp is not None:
             modifiers["since"] = self.last_scan_timestamp
         url_list = Utility.create_url_batch(base_url, self.batch_size,
@@ -90,7 +81,7 @@ class HaloScans(object):
         return scans
 
     def set_attrs_from_kwargs(self, kwargs):
-        arg_list = ["start_timestamp", "max_threads", "batch_size",
+        arg_list = ["max_threads", "batch_size",
                     "search_params", "api_host", "api_port"]
         for arg in arg_list:
             if arg in kwargs:
