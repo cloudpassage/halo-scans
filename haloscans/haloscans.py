@@ -33,7 +33,7 @@ class HaloScans(object):
         self.scans = []
         self.halo_session = None
         self.ua = Utility.build_ua("")
-        self.search_params = {"since": Utility.iso8601_now()
+        self.search_params = {"since": Utility.iso8601_now(),
                               "sort_by": "created_at.asc"}
         self.set_attrs_from_kwargs(kwargs)
 
