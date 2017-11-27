@@ -19,6 +19,6 @@ RUN pip install pytest==2.8.0 \
 
 RUN pip install -e .
 
-RUN py.test --cov=haloscans
+RUN /usr/bin/python -mpy.test --cov=haloscans
 
 RUN git branch -v
