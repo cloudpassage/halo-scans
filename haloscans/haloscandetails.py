@@ -9,7 +9,7 @@ class HaloScanDetails(object):
         self.halo_secret = halo_secret
         self.api_host = "api.cloudpassage.com"
         self.api_port = 443
-        self.max_threads = 1
+        self.max_threads = 4
         self.batch_size = 20
         self.halo_session = None
         self.ua = Utility.build_ua("")
