@@ -44,19 +44,15 @@ class Utility(object):
 
     @classmethod
     def sorted_items_from_pages(cls, pages, pagination_key, sort_key):
-        items = []
-        for page in pages:
-            for item in page[pagination_key]:
-                items.append(item)
+        """Return items from pages, sorted by ``sort_key``."""
+        items = cls.items_from_pages(pages, pagination_key)
         result = Utility.order_items(items, sort_key)
         return result
 
     @classmethod
     def items_from_pages(cls, pages, pagination_key):
-        items = []
-        for page in pages:
-            for item in page[pagination_key]:
-                items.append(item)
+        """Get items from pages, extracted from ``page[pagination_key]``."""
+        items = [item for page in pages for item in page[pagination_key]]
         return items
 
     @classmethod
