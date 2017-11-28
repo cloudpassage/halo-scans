@@ -9,8 +9,7 @@ class HaloScanDetails(object):
         self.halo_secret = halo_secret
         self.api_host = "api.cloudpassage.com"
         self.api_port = 443
-        self.max_threads = 1
-        self.batch_size = 20
+        self.max_threads = 4
         self.halo_session = None
         self.ua = Utility.build_ua("")
         self.search_params = {}
@@ -47,7 +46,7 @@ class HaloScanDetails(object):
         return Utility.items_from_pages(results, "findings")
 
     def set_attrs_from_kwargs(self, kwargs):
-        arg_list = ["max_threads", "batch_size", "api_host", "api_port"]
+        arg_list = ["max_threads", "api_host", "api_port"]
         for arg in arg_list:
             if arg in kwargs:
                 setattr(self, arg, kwargs[arg])
