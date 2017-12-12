@@ -1,5 +1,5 @@
 import cloudpassage
-from multiprocessing.dummy import Pool as ThreadPool
+from halo_general import HaloGeneral
 from utility import Utility
 
 
@@ -15,19 +15,12 @@ class HaloScanDetails(object):
         self.search_params = {}
         self.set_attrs_from_kwargs(kwargs)
 
-    def build_halo_session(self):
-        """Instantiates the Halo session"""
-        halo_session = cloudpassage.HaloSession(self.halo_key,
-                                                self.halo_secret,
-                                                api_host=self.api_host,
-                                                api_port=self.api_port,
-                                                integration_string=self.ua)
-        halo_session.authenticate_client()
-        return halo_session
-
     def get(self, scan_id):
         """This wraps other functions that get specific scan details"""
-        session = self.build_halo_session()
+        session = HaloGeneral.build_halo_session(self.halo_key,
+                                                 self.halo_secret,
+                                                 self.api_host,
+                                                 self.api_port, self.ua)
         scan = cloudpassage.Scan(session)
         details = scan.scan_details(scan_id)
         if details["module"] == "fim":
@@ -42,7 +35,9 @@ class HaloScanDetails(object):
             findings_url = "/v1/scans/%s/findings/%s" % (scan_document["id"],
                                                          finding["id"])
             findings.append(findings_url)
-        results = self.get_pages(findings)
+        results = HaloGeneral.get_pages(self.halo_key, self.halo_secret,
+                                        self.api_host, self.api_port, self.ua,
+                                        self.max_threads, findings)
         return Utility.items_from_pages(results, "findings")
 
     def set_attrs_from_kwargs(self, kwargs):
@@ -52,14 +47,3 @@ class HaloScanDetails(object):
                 setattr(self, arg, kwargs[arg])
         if "integration_name" in kwargs:
             setattr(self, "ua", Utility.build_ua(kwargs["integration_name"]))
-
-    def get_pages(self, url_list):
-        """Magic happens here... we map pages to threads in a pool, return
-        results when it's all done."""
-        halo_session = self.build_halo_session()
-        page_helper = cloudpassage.HttpHelper(halo_session)
-        pool = ThreadPool(self.max_threads)
-        results = pool.map(page_helper.get, url_list)
-        pool.close()
-        pool.join()
-        return results

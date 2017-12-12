@@ -1,7 +1,6 @@
-import cloudpassage
-from multiprocessing.dummy import Pool as ThreadPool
 import time
 from utility import Utility
+from halo_general import HaloGeneral
 
 
 class HaloScans(object):
@@ -43,16 +42,6 @@ class HaloScans(object):
             for scan in self.get_next_batch():
                 yield scan
 
-    def build_halo_session(self):
-        """Instantiates the Halo session"""
-        halo_session = cloudpassage.HaloSession(self.halo_key,
-                                                self.halo_secret,
-                                                api_host=self.api_host,
-                                                api_port=self.api_port,
-                                                integration_string=self.ua)
-        halo_session.authenticate_client()
-        return halo_session
-
     def create_url_list(self):
         base_url = "/v1/scans"
         modifiers = self.search_params
@@ -65,7 +54,9 @@ class HaloScans(object):
     def get_next_batch(self):
         """Gets the next batch of scans from the Halo API"""
         url_list = self.create_url_list()
-        pages = self.get_pages(url_list)
+        pages = HaloGeneral.get_pages(self.halo_key, self.halo_secret,
+                                      self.api_host, self.api_port, self.ua,
+                                      self.max_threads, url_list)
         scans = Utility.sorted_items_from_pages(pages, "scans", "created_at")
         if scans[0]["id"] == self.last_scan_id:
             del scans[0]
@@ -88,14 +79,3 @@ class HaloScans(object):
                 setattr(self, arg, kwargs[arg])
         if "integration_name" in kwargs:
             setattr(self, "ua", Utility.build_ua(kwargs["integration_name"]))
-
-    def get_pages(self, url_list):
-        """Magic happens here... we map pages to threads in a pool, return
-        results when it's all done."""
-        halo_session = self.build_halo_session()
-        page_helper = cloudpassage.HttpHelper(halo_session)
-        pool = ThreadPool(self.max_threads)
-        results = pool.map(page_helper.get, url_list)
-        pool.close()
-        pool.join()
-        return results
