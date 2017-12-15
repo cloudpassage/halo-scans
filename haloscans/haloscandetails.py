@@ -14,7 +14,6 @@ class HaloScanDetails(object):
         self.ua = Utility.build_ua("")
         self.search_params = {}
         self.set_attrs_from_kwargs(kwargs)
-        self.set_halo_session()
 
     def get(self, scan_id):
         """This wraps other functions that get specific scan details"""
