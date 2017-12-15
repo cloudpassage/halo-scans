@@ -17,11 +17,7 @@ class HaloScanDetails(object):
 
     def get(self, scan_id):
         """This wraps other functions that get specific scan details"""
-        session = HaloGeneral.build_halo_session(self.halo_key,
-                                                 self.halo_secret,
-                                                 self.api_host,
-                                                 self.api_port, self.ua)
-        scan = cloudpassage.Scan(session)
+        scan = cloudpassage.Scan(self.halo_session)
         details = scan.scan_details(scan_id)
         if details["module"] == "fim":
             new_deets = self.enrich_fim(details)
@@ -47,3 +43,10 @@ class HaloScanDetails(object):
                 setattr(self, arg, kwargs[arg])
         if "integration_name" in kwargs:
             setattr(self, "ua", Utility.build_ua(kwargs["integration_name"]))
+
+    def set_halo_session(self):
+        self.halo_session = HaloGeneral.build_halo_session(self.halo_key,
+                                                           self.halo_secret,
+                                                           self.api_host,
+                                                           self.api_port,
+                                                           self.ua)
