@@ -39,7 +39,7 @@ class HaloScans(object):
     def __iter__(self):
         """Yields scans one at a time. Forever."""
         while True:
-            for scan in self.get_next_batch():
+            for scan in self.get_details_from_batch(self.get_next_batch()):
                 yield scan
 
     def create_url_list(self):
@@ -50,6 +50,14 @@ class HaloScans(object):
         url_list = Utility.create_url_batch(base_url, self.batch_size,
                                             modifiers=modifiers)
         return url_list
+
+    def get_details_from_batch(self, scans):
+        """Gets detailed scan information from batch of scans."""
+        url_list = [str("/v1/scans/%s" % x["id"]) for x in scans]
+        pages = HaloGeneral.get_pages(self.halo_key, self.halo_secret,
+                                      self.api_host, self.api_port,
+                                      self.ua, self.max_threads, url_list)
+        return pages
 
     def get_next_batch(self):
         """Gets the next batch of scans from the Halo API"""
