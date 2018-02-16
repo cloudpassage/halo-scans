@@ -1,4 +1,5 @@
 import cloudpassage
+import time
 from halo_general import HaloGeneral
 from utility import Utility
 
@@ -19,11 +20,29 @@ class HaloScanDetails(object):
         """This wraps other functions that get specific scan details"""
         scan = cloudpassage.Scan(self.halo_session)
         details = scan.scan_details(scan_id)
+        details = self.hold_for_completion(details)
         if details["module"] == "fim":
             new_deets = self.enrich_fim(details)
             details["findings"] = None
             details["findings"] = new_deets
         return details
+
+    def hold_for_completion(self, scan_body):
+        """Wait for completion and return completed scan.
+
+        This function checks the status from scan_body and if the status is
+        queued, pending, or running, we wait and re-query until the status
+        indicates completion.
+
+        Args:
+            scan_body(dict): Body of scan from API.
+
+        """
+        scan = cloudpassage.Scan(self.halo_session)
+        while scan_body["status"] in ["queued", "pending", "running"]:
+            time.sleep(5)
+            scan_body = scan.scan_details(scan_body["id"])
+        return scan_body
 
     def enrich_fim(self, scan_document):
         findings = []
