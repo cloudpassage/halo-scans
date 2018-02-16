@@ -1,6 +1,8 @@
 import time
 from utility import Utility
 from halo_general import HaloGeneral
+from haloscandetails import HaloScanDetails
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 class HaloScans(object):
@@ -34,6 +36,7 @@ class HaloScans(object):
         self.ua = Utility.build_ua("")
         self.search_params = {"since": Utility.iso8601_now(),
                               "sort_by": "created_at.asc"}
+        self.kwargs = kwargs
         self.set_attrs_from_kwargs(kwargs)
 
     def __iter__(self):
@@ -53,11 +56,16 @@ class HaloScans(object):
 
     def get_details_from_batch(self, scans):
         """Gets detailed scan information from batch of scans."""
-        url_list = [str("/v1/scans/%s" % x["id"]) for x in scans]
-        pages = HaloGeneral.get_pages(self.halo_key, self.halo_secret,
-                                      self.api_host, self.api_port,
-                                      self.ua, self.max_threads, url_list)
-        return pages
+        id_list = [x["id"] for x in scans]
+        enricher = HaloScanDetails(self.halo_key, self.halo_secret,
+                                   batch_size=self.batch_size,
+                                   api_host=self.api_host,
+                                   api_port=self.api_port)
+        pool = ThreadPool(self.max_threads)
+        results = pool.map(enricher.get, id_list)
+        pool.close()
+        pool.join()
+        return results
 
     def get_next_batch(self):
         """Gets the next batch of scans from the Halo API"""
