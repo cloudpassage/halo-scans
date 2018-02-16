@@ -61,6 +61,7 @@ class HaloScans(object):
                                    batch_size=self.batch_size,
                                    api_host=self.api_host,
                                    api_port=self.api_port)
+        enricher.set_halo_session()
         pool = ThreadPool(self.max_threads)
         results = pool.map(enricher.get, id_list)
         pool.close()
