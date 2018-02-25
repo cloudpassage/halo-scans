@@ -1,8 +1,17 @@
 Changelog
 =========
 
-v0.12
+v0.15
 -----
+
+Changes
+~~~~~~~
+
+- Only yield scans once they've completed and can be enriched. [Ash
+  Wilson]
+
+v0.12 (2017-11-28)
+------------------
 
 - Tuned down the thread. [mong2]
 
