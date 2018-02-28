@@ -1,8 +1,20 @@
 Changelog
 =========
 
-v0.15
------
+v0.16 (2018-02-28)
+------------------
+
+Changes
+~~~~~~~
+
+- Refactor generator to use multiple threads and FIFO buffers for better
+  performance. [Ash Wilson]
+
+- Increased FIM enrichment threads from 2 to 4. Capped wait time for
+  incomplete scans at 6 minutes. [Ash Wilson]
+
+v0.15 (2018-02-25)
+------------------
 
 Changes
 ~~~~~~~
