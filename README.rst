@@ -41,19 +41,16 @@ pretty-print the scan results.
 ::
 
 
-        import haloscans
-        import pprint
-        scans = haloscans.HaloScans(key, secret, start_timestamp=start_timestamp)
-        enricher = haloscans.HaloScanDetails(key, secret)
-        enriched_scans = []
-        for scan in scans:
-            if not scan["created_at"].startswith(start_timestamp):
-                break
-            else:
-                enriched_scans.append(enricher.get(scan["id"]))
-        for e_scan in enriched_scans:
-            message = "ID: %s\tType: %s\nFindings: %s\n\n" % (e_scan["id"], e_scan["module"], pprint.pformat(e_scan))
+    import haloscans
+    import pprint
+    scans = haloscans.HaloScans(key, secret, start_timestamp=start_timestamp, report_performance=True)
+    for scan in scans:
+        if not scan["created_at"].startswith(start_timestamp):
+            break
+        else:
+            message = "ID: %s\tTime: %s\tType: %s\n" % (scan["id"], scan["created_at"], scan["module"])
             print(message)
+
 
 
 
