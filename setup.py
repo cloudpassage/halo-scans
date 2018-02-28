@@ -31,7 +31,7 @@ setup(
     keywords="cloudpassage halo api events",
     url="http://github.com/cloudpassage/halo-events",
     packages=["haloscans"],
-    install_requires=["cloudpassage >= 1.0"],
+    install_requires=["cloudpassage >= 1.1.2"],
     long_description=get_long_description(["README.rst", "CHANGELOG.rst"]),
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
