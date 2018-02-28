@@ -1,6 +1,5 @@
-from multiprocessing.dummy import Pool as ThreadPool
-
 import cloudpassage
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 class HaloGeneral(object):
