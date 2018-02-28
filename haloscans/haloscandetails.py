@@ -46,7 +46,7 @@ class HaloScanDetails(object):
         while scan_body["status"] in ["queued", "pending", "running"]:
             if time_waited == 300:
                 print("Scan with ID %s for server %s has been in hold_for_completion for more than 5 minutes!" % (scan_body["id"], scan_body["server_id"]))  # NOQA
-            elif time_waited == 360:
+            elif time_waited >= 360:
                 print("Not waiting on scan with ID %s anymore..." % scan_body["id"])  # NOQA
                 break
             time.sleep(wait_time)
