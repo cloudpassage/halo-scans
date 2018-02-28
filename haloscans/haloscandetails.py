@@ -10,7 +10,7 @@ class HaloScanDetails(object):
         self.halo_secret = halo_secret
         self.api_host = "api.cloudpassage.com"
         self.api_port = 443
-        self.max_threads = 2
+        self.max_threads = 4
         self.halo_session = None
         self.ua = Utility.build_ua("")
         self.search_params = {}
@@ -34,13 +34,23 @@ class HaloScanDetails(object):
         queued, pending, or running, we wait and re-query until the status
         indicates completion.
 
+        We don't wait more than 6 minutes for a scan to complete, though.
+
         Args:
             scan_body(dict): Body of scan from API.
 
         """
+        wait_time = 20
         scan = cloudpassage.Scan(self.halo_session)
+        time_waited = 0
         while scan_body["status"] in ["queued", "pending", "running"]:
-            time.sleep(5)
+            if time_waited == 300:
+                print("Scan with ID %s for server %s has been in hold_for_completion for more than 5 minutes!" % (scan_body["id"], scan_body["server_id"]))  # NOQA
+            elif time_waited == 360:
+                print("Not waiting on scan with ID %s anymore..." % scan_body["id"])  # NOQA
+                break
+            time.sleep(wait_time)
+            time_waited += wait_time
             scan_body = scan.scan_details(scan_body["id"])
         return scan_body
 
