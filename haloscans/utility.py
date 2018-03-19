@@ -3,6 +3,7 @@ import operator
 import os
 import re
 import urllib
+from dateutil.parser import parse
 
 
 class Utility(object):
@@ -14,14 +15,23 @@ class Utility(object):
 
     @classmethod
     def iso8601_now(cls):
-        return Utility.date_to_iso8601(datetime.datetime.utcnow())
+        """ISO8601 string for now."""
+        return str(Utility.date_to_iso8601(datetime.datetime.utcnow()) + "Z")
+
+    @classmethod
+    def iso_8601_delta(cls, date_1, date_2):
+        """Return a datetime.timedelta for date_1 minus date_2."""
+        delta = (parse(date_1) - parse(date_2))
+        return delta
 
     @classmethod
     def read(cls, fname):
+        """Read a file."""
         return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
     @classmethod
     def get_version(cls):
+        """Get the version of this library."""
         raw_init_file = Utility.read("__init__.py")
         rx_compiled = re.compile(r"\s*__version__\s*=\s*\"(\S+)\"")
         ver = rx_compiled.search(raw_init_file).group(1)
@@ -29,6 +39,7 @@ class Utility(object):
 
     @classmethod
     def build_ua(cls, integration_name):
+        """Build the UA string."""
         product = "HaloScans"
         version = Utility.get_version()
         if integration_name == "":
@@ -39,6 +50,7 @@ class Utility(object):
 
     @classmethod
     def order_items(cls, items, sort_key):
+        """Return items, sorted by sort_key."""
         sorted_list = sorted(items, key=operator.itemgetter(sort_key))
         return sorted_list
 
@@ -57,6 +69,7 @@ class Utility(object):
 
     @classmethod
     def build_url(cls, base_url, modifiers):
+        """Construct a URL."""
         params = urllib.urlencode(modifiers)
         url = "%s?%s" % (base_url, params)
         return url

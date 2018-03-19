@@ -1,5 +1,5 @@
 import cloudpassage
-import sys
+import datetime
 import threading
 import time
 from collections import deque
@@ -32,9 +32,11 @@ class HaloScans(object):
         self.halo_key = halo_key
         self.halo_secret = halo_secret
         self.api_host = "api.cloudpassage.com"
+        self.init_time = datetime.datetime.now()
         self.api_port = 443
         self.max_threads = 10
         self.batch_size = 30
+        self.scans_by_module = {}
         self.last_scan_timestamp = None
         self.currently_enriching = 0
         self.scans_processed = 0
@@ -43,12 +45,16 @@ class HaloScans(object):
         self.report_performance = False
         self.halo_session = None
         self.ua = Utility.build_ua("")
-        self.search_params = {"since": Utility.iso8601_now(),
-                              "sort_by": "created_at.asc"}
+        self.scan_timeout = 300
+        self.shutdown = False
+        self.search_params = {}  # Set params empty
+        self.search_params["since"] = Utility.iso8601_now()  # Default to 'now'
         self.kwargs = kwargs
         self.set_attrs_from_kwargs(kwargs)
-        if "start_timestamp" in kwargs:
+        if "start_timestamp" in kwargs:  # Final authority on start time.
             self.search_params["since"] = kwargs["start_timestamp"]
+        self.search_params["sort_by"] = "created_at.asc"  # Force sort
+        print("Search params: %s" % self.search_params)
 
     def __iter__(self):
         """Yields scans one at a time. Forever.
@@ -69,81 +75,118 @@ class HaloScans(object):
                                                            self.api_host,
                                                            self.api_port,
                                                            self.ua)
-        # First, we start the ingestion thread
-        ingest = threading.Thread(target=self.scan_id_preloader)
-        ingest.daemon = True
-        ingest.start()
-        # Next, we start the enrichment thread.
-        enrich = threading.Thread(target=self.scan_enricher)
-        enrich.daemon = True
-        enrich.start()
-        # Next, we start the performance reporter thread.
-        performance = threading.Thread(target=self.performance_reporter)
-        performance.daemon = True
-        performance.start()
+        self.shutdown = False
+        # We configure the ingestion thread
+        self.ingest = threading.Thread(target=self.scan_id_preloader)
+        self.ingest.daemon = True
+        # Next, we configure the enrichment thread.
+        self.enrich = threading.Thread(target=self.scan_enricher)
+        self.enrich.daemon = True
+        # Next, we configure the performance reporter thread.
+        self.performance = threading.Thread(target=self.performance_reporter)
+        self.performance.daemon = True
+        # Starting threads
+        self.ingest.start()
+        self.enrich.start()
+        self.performance.start()
         while True:
-            # If any threads die, we exit, printing the appropriate message.
             healthy = True
-            if not ingest.is_alive():
+            if self.shutdown is True:  # This is how we cleanly shutdown.
+                print("Stopping threads...")
+                self.ingest.join(20)
+                self.enrich.join(20)
+                self.performance.join(60)
+                self.ingest = None
+                self.enrich = None
+                self.performance = None
+                self.shutdown = False  # Reset, in case we want to re-start
+                raise StopIteration
+            elif not self.ingest.is_alive():
                 healthy = False
-                print("Ingestion thread is dead!")
-            elif not enrich.is_alive():
+                print("Ingestion thread has died!")
+            elif not self.enrich.is_alive():
                 healthy = False
-                print("Enrichment thread is dead!")
-            elif not performance.is_alive():
+                print("Enrichment thread has died!")
+            elif not self.performance.is_alive():
                 healthy = False
-                print("Performance monitoring thread is dead!")
-            if not healthy:
+                print("Performance monitoring thread has died!")
+            if not healthy:  # Gracefully shutdown if unhealthy.
                 print("Timestamp from last scan processed: %s" %
                       self.last_scan_timestamp)
-                sys.exit(1)
+                self.shutdown = True
+                continue
             # Now, we yield a scan if any are waiting.
             try:
                 current_scan = self.completed_scans.popleft()
                 self.last_scan_timestamp = current_scan["created_at"]
                 self.scans_processed += 1
+                self.tally_scan(str(current_scan["module"]))
                 yield current_scan
             except IndexError:
-                time.sleep(1)
+                try:
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    self.shutdown = True
+            except KeyboardInterrupt:
+                self.shutdown = True
 
     def scan_id_preloader(self):
         """Get scan metadata from /v1/scans endpoint, load ids into queue."""
         scan_streamer = cloudpassage.TimeSeries(self.halo_session,
                                                 self.search_params["since"],
                                                 "/v1/scans", "scans",
-                                                {"sort_by": "created_at.asc"})
+                                                self.search_params)
         for scan in scan_streamer:
+            if self.shutdown:
+                break
             self.scans_unprocessed.append(scan["id"])
+        print("Stopped scan ID preloader thread.")
+        return
 
     def scan_enricher(self):
         """Enrich scans by id from queue."""
         ids_to_process = []
         while True:
+            if self.shutdown:
+                break
             while (len(self.scans_unprocessed) > 0 and
                    len(ids_to_process) < self.batch_size):
                 ids_to_process.append(self.scans_unprocessed.popleft())
             self.completed_scans.extend(self.get_details_from_batch(ids_to_process))  # NOQA
             ids_to_process = []
             time.sleep(1)
+        print("Stopped scan enricher thread.")
+        return
 
     def performance_reporter(self):
         """Periodically print out performance information."""
         time.sleep(10)
         while True:
-            perf = ("Performance %s:\n\tTotal processed: %d\n\tAwaiting enrichment: %s\n\tCurrently enriching: %d\n\tOutbound: %s" %  # NOQA
-                    (Utility.iso8601_now(),
-                     int(self.scans_processed), len(self.scans_unprocessed),
-                     int(self.currently_enriching), len(self.completed_scans)))
+            if self.shutdown:
+                break
+            uptime = int((datetime.datetime.now() - self.init_time).seconds)
+            scans_per_second = str(self.scans_processed / uptime)
+            perf = "Performance %s:\n" % Utility.iso8601_now()
+            perf += "\tRunning for %s seconds\n" % uptime
+            perf += "\tTotal processed: %d\n" % int(self.scans_processed)
+            perf += "\tBy module:\n\t\t%s\n" % self.get_scan_counts_by_module()
+            perf += "\tScans per second: %s\n" % scans_per_second
+            perf += "\tAwaiting enrichment: %s\n" % len(self.scans_unprocessed)
+            perf += "\tEnriching now: %d\n" % int(self.currently_enriching)
+            perf += "\tOutbound: %s\n" % len(self.completed_scans)
             if self.report_performance:
                 print(perf)
             time.sleep(60)
+        print("Stopped performance reporter thread.")
+        return
 
     def get_details_from_batch(self, id_list):
         """Gets detailed scan information from batch of scans."""
         self.currently_enriching = len(id_list)
         enricher = HaloScanDetails(self.halo_key, self.halo_secret,
                                    api_host=self.api_host,
-                                   api_port=self.api_port)
+                                   api_port=self.api_port,
+                                   scan_timeout=self.scan_timeout)
         enricher.set_halo_session()
         pool = ThreadPool(self.max_threads)
         results = pool.map(enricher.get, id_list)
@@ -153,9 +196,22 @@ class HaloScans(object):
         retval = Utility.order_items(results, "created_at")
         return retval
 
+    def get_scan_counts_by_module(self):
+        ret_lst = []
+        for module, count in sorted(self.scans_by_module.items()):
+            ret_lst.append("%s: %s" % (module, count))
+        return " | ".join(ret_lst)
+
+    def tally_scan(self, scan_module):
+        if scan_module not in self.scans_by_module:
+            self.scans_by_module[scan_module] = 1
+        else:
+            self.scans_by_module[scan_module] += 1
+        return
+
     def set_attrs_from_kwargs(self, kwargs):
         arg_list = ["max_threads", "batch_size", "report_performance",
-                    "search_params", "api_host", "api_port"]
+                    "search_params", "api_host", "api_port", "scan_timeout"]
         for arg in arg_list:
             if arg in kwargs:
                 setattr(self, arg, kwargs[arg])

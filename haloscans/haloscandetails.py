@@ -14,6 +14,7 @@ class HaloScanDetails(object):
         self.halo_session = None
         self.ua = Utility.build_ua("")
         self.search_params = {}
+        self.scan_timeout = 300
         self.set_attrs_from_kwargs(kwargs)
 
     def get(self, scan_id):
@@ -40,21 +41,24 @@ class HaloScanDetails(object):
             scan_body(dict): Body of scan from API.
 
         """
-        wait_time = 20
+        wait_time = 10
         scan = cloudpassage.Scan(self.halo_session)
-        time_waited = 0
+        # time_waited = 0
         while scan_body["status"] in ["queued", "pending", "running"]:
-            if time_waited == 300:
-                print("Scan with ID %s for server %s has been in hold_for_completion for more than 5 minutes!" % (scan_body["id"], scan_body["server_id"]))  # NOQA
-            elif time_waited >= 360:
-                print("Not waiting on scan with ID %s anymore..." % scan_body["id"])  # NOQA
+            # if time_waited >= self.scan_timeout:
+            t_delta = Utility.iso_8601_delta(Utility.iso8601_now(),
+                                             scan_body["created_at"])
+            if abs(t_delta.seconds) > self.scan_timeout:
+                print("Not waiting on scan with ID %s anymore...(%s seconds)" %
+                      (scan_body["id"], abs(t_delta.seconds)))
                 break
             time.sleep(wait_time)
-            time_waited += wait_time
+            # time_waited += wait_time
             scan_body = scan.scan_details(scan_body["id"])
         return scan_body
 
     def enrich_fim(self, scan_document):
+        """Return a Halo FIM scan, enriched with findings information."""
         findings = []
         for finding in scan_document["findings"]:
             findings_url = "/v1/scans/%s/findings/%s" % (scan_document["id"],
@@ -66,7 +70,8 @@ class HaloScanDetails(object):
         return Utility.items_from_pages(results, "findings")
 
     def set_attrs_from_kwargs(self, kwargs):
-        arg_list = ["max_threads", "api_host", "api_port"]
+        """Set instance attributes from kwargs."""
+        arg_list = ["max_threads", "api_host", "api_port", "scan_timeout"]
         for arg in arg_list:
             if arg in kwargs:
                 setattr(self, arg, kwargs[arg])
@@ -74,6 +79,7 @@ class HaloScanDetails(object):
             setattr(self, "ua", Utility.build_ua(kwargs["integration_name"]))
 
     def set_halo_session(self):
+        """Authenticate this instance's Halo session."""
         self.halo_session = HaloGeneral.build_halo_session(self.halo_key,
                                                            self.halo_secret,
                                                            self.api_host,
