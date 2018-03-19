@@ -34,16 +34,18 @@ Installing:
 Example usage:
 --------------
 
-The following example retrieves a list of all scans for a day, then queries
-the API to enrich the basic scan metadata with scan findings.  Finally, we
-pretty-print the scan results.
+The following example retrieves a list of all FIM scans for New Year's Day,
+then queries the API to enrich the basic scan metadata with scan findings.
+Finally, we pretty-print the scan results.
 
 ::
 
 
     import haloscans
     import pprint
-    scans = haloscans.HaloScans(key, secret, start_timestamp=start_timestamp, report_performance=True)
+    search_params = {"module": "fim"}
+    start_timestamp = "2018-01-01"
+    scans = haloscans.HaloScans(key, secret, start_timestamp=start_timestamp, report_performance=True, search_params=search_params)
     for scan in scans:
         if not scan["created_at"].startswith(start_timestamp):
             break
